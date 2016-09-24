@@ -31,7 +31,7 @@ func main() {
 	load_config()
 	/* Get all the exposes! */
 	for _,url := range GLOBAL_CONFIG.urls {
-		get_exposes(url)	
+		//get_exposes(url)	
 	}
 	
 }
@@ -70,9 +70,9 @@ func is_already_collected(list []string) bool {
 
 func load_config() {
 	url := Url{url1:"https://www.immobilienscout24.de/Suche/S-T",
-				url2:"/Wohnung-Miete/Fahrzeitsuche/M_fcnchen/-/113055/2029726/-/1276002059/60/2,00-/-/EURO--800,00?enteredFrom=one_step_search",
-				pagingfix:"/P-",
-				page_max:0}
+		url2:"/Wohnung-Miete/Fahrzeitsuche/M_fcnchen/-/113055/2029726/-/1276002059/60/2,00-/-/EURO--800,00?enteredFrom=one_step_search",
+		pagingfix:"/P-",
+		page_max:0}
 	GLOBAL_CONFIG.urls = append(GLOBAL_CONFIG.urls, url)
 } 
 
