@@ -119,7 +119,7 @@ func run_regexp_get_pets(data []byte, expose *Expose){
 	re := regexp.MustCompile(regexpStr)
 	result := re.FindAllStringSubmatch(string(data), -1);
 	expose.pets = TABLE_EXPOSES_YES
-	fmt.Println(result)
+//	fmt.Println(result)
 	if len(result) > 0 {
 		if len(result[0]) > 0 {
 			if result[0][1] == "Nein" {
@@ -145,6 +145,8 @@ func run_regexp_get_rooms(data []byte, expose *Expose){
 	re := regexp.MustCompile(regexpStr)
 	result := re.FindAllStringSubmatch(string(data), -1);
 	rooms,_ := strconv.ParseInt(result[0][1], 10, 64)
+	fmt.Println("rooms")
+	fmt.Println(result)
 	expose.rooms = int(rooms)
 } 
 
