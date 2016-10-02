@@ -13,11 +13,25 @@ $CONFIG = array(
 		'regexp' => array(
 					'search' => '/data-go-to-expose-id=\"(\d+)\"/',
 					'exposes' => array(
-						'price_cold' => '/<div class=\"is24qa-kaltmiete is24-value font-semibold\">\s(.+)\s€\s<\/div>/'
+						'integers' => array(
+							'price_cold' => '/<div class=\"is24qa-kaltmiete is24-value font-semibold\">\s(.+)\s€\s<\/div>/',
+							'price_warm' => '/<dd class=\"is24qa-nebenkosten grid-item three-fifths\"> <span class=\"is24-operator\">.+<\/span>\s(.+)\s€\s<\/dd>/U',
+							'rooms' => '/<div class=\"is24qa-zi is24-value font-semibold\">\s(.+)\s<\/div>/U',
+							'size' => '/<div class=\"is24qa-flaeche is24-value font-semibold\">\s(.+)\sm²\s<\/div>/U'
 						),
+						'strings' => array(
+
+						),
+						'special' => array(
+							'pets' => '/<dd class=\"is24qa-haustiere grid-item three-fifths\">\s(.+)\s<\/dd>/U'
+						)
 					),
+		),
+		'expose_not_found' => 'Immobilie nicht gefunden',
 	);
 $DATABASE_HANDLER = new DBHandler();
+
+//preg_match_all("", $input_lines, $output_array);
 
 /*
 collected, rooms, size, online) values(:id, :name, :price_warm,
@@ -96,7 +110,7 @@ function revisit_searches()
 			$expose = $DATABASE_HANDLER->Get_Expose_By_Id($expose_id);
 			if ($expose === false)
 			{
-				$expose = _get_default_expose();
+				$expose = DBHandler::Get_default_expose();
 				$expose['id'] = $expose_id;
 				$expose['first_seen'] = time();
 				$expose['url'] = $CONFIG['sites_expose_url_prefix'] . $expose_id;
@@ -110,11 +124,31 @@ function revisit_searches()
 function collect_expose_information($exposes)
 {
 	global $CONFIG;
+	global $DATABASE_HANDLER;
 
 	foreach ($exposes as $expose)
 	{
-		$data = file_get_contents($expose['url']);
-		foreach ($CONFIG['regexp']['exposes'] as $data_key => $regexp)
+		$data = file_get_contents($expose['url']);   // https://www.immobilienscout24.de/90485806, den failar, perfect att använda som test.
+
+		if (strpos($data, $CONFIG['expose_not_found']) != false)
+		{
+			$expose['online'] = DBHandler::TABLE_EXPOSES_FALSE;
+			$DATABASE_HANDLER->Update_Expose($expose);
+			printf("Expose (%s) was not online, marked as offline.\n", $expose['id']);
+			continue;
+		}
+		/* Get all integer values */
+		foreach ($CONFIG['regexp']['exposes']['integers'] as $data_key => $regexp)
+		{
+			preg_match_all($regexp, $data, $output);
+			if (isset($output[1][0]))
+			{
+				$expose[$data_key] = (int)$output[1][0];
+			}
+		}
+
+		/* Get all string values */
+		foreach ($CONFIG['regexp']['exposes']['strings'] as $data_key => $regexp)
 		{
 			preg_match_all($regexp, $data, $output);
 			if (isset($output[1][0]))
@@ -122,9 +156,37 @@ function collect_expose_information($exposes)
 				$expose[$data_key] = $output[1][0];
 			}
 		}
-		var_dump($expose);
-		die;
+
+		/* Get all special values */
+		foreach ($CONFIG['regexp']['exposes']['special'] as $data_key => $regexp)
+		{
+			$func = '_special__'.$data_key;
+			$expose[$data_key] = $func($data, $regexp);
+		}
+
+//		var_dump($expose);
+	//	printf("Total number of exposes: %d\n", count($exposes));
+//		die;
 	}
+}
+
+
+function _special__pets($data, $regexp)
+{
+	$result = DBHandler::TABLE_EXPOSES_MAYBE;
+	preg_match_all($regexp, $data, $output);
+	if (isset($output[1][0]))
+	{
+		if ($output[1][0] == 'Nein')
+		{
+			$result = DBHandler::TABLE_EXPOSES_FALSE;	
+		}
+		if ($output[1][0] == 'Ja')
+		{
+			$result = DBHandler::TABLE_EXPOSES_TRUE;	
+		}
+	}
+	return $result;
 }
 
 
@@ -135,27 +197,5 @@ function check_for_valid_exposes()
 
 
 
-function _get_default_expose()
-{
-	return 	array(
-		'id' => '',
-		'name' => '',
-		'price_warm' => 0,
-		'price_cold' => 0,
-		'first_seen' => 0,
-		'last_seen' => 0,
-		'care' => '',
-		'pets' => '',
-		'zipcode' => '',
-		'city' => '',
-		'dist_work' => 0,
-		'kausion' => 0,
-		'url' => '',
-		'collected' => '',
-		'rooms' => 0,
-		'size' => 0,
-		'online' => '',
-		'next_check' => 0
-	);
-}
+
 ?>

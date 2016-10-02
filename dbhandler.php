@@ -4,6 +4,7 @@ class DBHandler
 {
 	const TABLE_EXPOSES_TRUE = 'Y';
 	const TABLE_EXPOSES_FALSE = 'N';
+	const TABLE_EXPOSES_MAYBE = 'M';
 
 	private $db;
 	private $TABLE_EXPOSES = 'create table if not exists exposes 
@@ -22,12 +23,23 @@ class DBHandler
 
 	function Store_Expose($expose)
 	{
-		$stmt = $this->db->prepare('insert into exposes(id, name, price_warm, price_cold, first_seen, 
-									last_seen, care, pets, zipcode, city, dist_work, kausion, url, 
-									collected, rooms, size, online, next_check) values(:id, :name, :price_warm,
-									:price_cold, :first_seen, :last_seen, :care, :pets, :zipcode,
-									:city, :dist_work, :kausion, :url, :collected, :rooms, :size, :online,
-									:next_check)');
+		$query = 'insert into exposes(';
+		$itr = 0;
+		foreach ($expose as $key => $value) 
+		{
+			$query .= $key;
+			$query .= ($itr < count($expose) -1 ? ', ' : ') ');
+			$itr++;
+		}
+		$query .= 'values(';
+		$itr = 0;
+		foreach ($expose as $key => $value) 
+		{
+			$query .= ':'.$key;
+			$query .= ($itr < count($expose) -1 ? ', ' : ')');
+			$itr++;
+		}
+		$stmt = $this->db->prepare($query);
 		foreach ($expose as $key => $value) 
 		{
 			$stmt->bindValue(':'.$key, $value);
@@ -44,7 +56,8 @@ class DBHandler
 		$result = $stmt->execute();		
 		$list = array();
 		while ($row = $result->fetchArray()) {
-			$list[] = $row;
+			$list[] = $this->_clean_expose_result($row);
+
 		}
 		return $list;
 	}
@@ -60,6 +73,66 @@ class DBHandler
 			$list[] = $row;
 		}
 		return reset($list);
+	}
+
+
+	function Update_Expose($expose) 
+	{
+		$query = 'update exposes set ';
+		$itr = 0;
+		foreach ($expose as $key => $value) 
+		{
+			if ($key != 'id')
+			{
+				$query .= $key.'=:'.$key;
+				$query .= ($itr < count($expose) -1 ? ', ' : ' ');
+			}
+			$itr++;
+		}
+		$query .= 'where id=:id';
+		$stmt = $this->db->prepare($query);
+		foreach ($expose as $key => $value) 
+		{
+			$stmt->bindValue(':'.$key, $value);
+		}
+		$result = $stmt->execute();	
+	}
+
+
+	function Get_default_expose()
+	{
+		return 	array(
+			'id' => '',
+			'name' => '',
+			'price_warm' => 0,
+			'price_cold' => 0,
+			'first_seen' => 0,
+			'last_seen' => 0,
+			'care' => '',
+			'pets' => '',
+			'zipcode' => '',
+			'city' => '',
+			'dist_work' => 0,
+			'kausion' => 0,
+			'url' => '',
+			'collected' => '',
+			'rooms' => 0,
+			'size' => 0,
+			'online' => '',
+			'next_check' => 0
+		);
+	}
+
+
+	function _clean_expose_result($expose)
+	{
+		$default_expose = $this->Get_default_expose();
+		$result = $this->Get_default_expose();
+		foreach ($default_expose as $key => $value)
+		{
+			$result[$key] = $expose[$key];
+		}
+		return $result;
 	}
 }
 
