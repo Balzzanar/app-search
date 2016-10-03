@@ -3,8 +3,8 @@
 require('dbhandler.php');
 
 $CONFIG = array(
-		'next_search_revisit_time' => 0,
 		'next_search_revisit_offset' => 3000,
+		'next_expose_recheck_offset' => 10800,
 		'sleep_time' => 30,
 		'sites'	=> array(
 					'https://www.immobilienscout24.de/Suche/S-T/Wohnung-Miete/Fahrzeitsuche/M_fcnchen/-/113055/2029726/-/1276002059/60/2,00-/-/EURO--800,00?enteredFrom=one_step_search'
@@ -20,10 +20,13 @@ $CONFIG = array(
 							'size' => '/<div class=\"is24qa-flaeche is24-value font-semibold\">\s(.+)\sm²\s<\/div>/U'
 						),
 						'strings' => array(
-
+							'floor' => '/<dd class=\"is24qa-etage grid-item three-fifths\">(.+)<\/dd>/U',
+							'access' => '/<dd class=\"is24qa-bezugsfrei-ab grid-item three-fifths\">(.+)<\/dd>/U'
 						),
 						'special' => array(
-							'pets' => '/<dd class=\"is24qa-haustiere grid-item three-fifths\">\s(.+)\s<\/dd>/U'
+							'pets' => '/<dd class=\"is24qa-haustiere grid-item three-fifths\">\s(.+)\s<\/dd>/U',
+							'kausion' => '/<dd class=\"is24qa-kaution-o-genossenschaftsanteile is24-ex-spacelink grid-item three-fifths\".+>.+<\/dd>/',
+							'adress' => '/<span class=\"block font-nowrap print-hide\">(.+)<\/div>/U'
 						)
 					),
 		),
@@ -62,7 +65,7 @@ collected, rooms, size, online) values(:id, :name, :price_warm,
 	//$DATABASE_HANDLER->Store_Expose($expose);
 
 
-
+$next_search_revisit_time = 0;
 while(true)
 {
 	/***
@@ -74,10 +77,10 @@ while(true)
 			- If there are, mail them.
 	*/
 
-	if (time() > $CONFIG['next_search_revisit_time'])
+	if (time() > $next_search_revisit_time)
 	{
 		revisit_searches();
-		$CONFIG['next_search_revisit_time'] = time() + $CONFIG['next_search_revisit_offset'];
+		$next_search_revisit_time = time() + $CONFIG['next_search_revisit_offset'];
 	}
 
 	collect_expose_information($DATABASE_HANDLER->Get_Exposes_For_Collection());
@@ -126,17 +129,21 @@ function collect_expose_information($exposes)
 	global $CONFIG;
 	global $DATABASE_HANDLER;
 
+	printf("Infomation collection %d in total\n", count($exposes)-1);
+	$itr = 0;
 	foreach ($exposes as $expose)
 	{
 		$data = file_get_contents($expose['url']);   // https://www.immobilienscout24.de/90485806, den failar, perfect att använda som test.
-
 		if (strpos($data, $CONFIG['expose_not_found']) != false)
 		{
 			$expose['online'] = DBHandler::TABLE_EXPOSES_FALSE;
 			$DATABASE_HANDLER->Update_Expose($expose);
-			printf("Expose (%s) was not online, marked as offline.\n", $expose['id']);
+			printf("(%d/%d), Expose (%s) was not online, marked as offline\n", $itr, count($exposes)-1, $expose['id']);
 			continue;
 		}
+
+		printf("(%d/%d), Expose is online, collecting information for expose (%s)\n", $itr, count($exposes)-1, $expose['id']);
+
 		/* Get all integer values */
 		foreach ($CONFIG['regexp']['exposes']['integers'] as $data_key => $regexp)
 		{
@@ -153,7 +160,7 @@ function collect_expose_information($exposes)
 			preg_match_all($regexp, $data, $output);
 			if (isset($output[1][0]))
 			{
-				$expose[$data_key] = $output[1][0];
+				$expose[$data_key] = trim($output[1][0]);
 			}
 		}
 
@@ -161,17 +168,22 @@ function collect_expose_information($exposes)
 		foreach ($CONFIG['regexp']['exposes']['special'] as $data_key => $regexp)
 		{
 			$func = '_special__'.$data_key;
-			$expose[$data_key] = $func($data, $regexp);
+			//$expose[$data_key] = $func($data, $regexp, &$expose);
+			$func($data, $regexp, $expose);
 		}
 
-//		var_dump($expose);
+
+		$expose['next_check'] = time() + $CONFIG['next_expose_recheck_offset'];
+	//	$DATABASE_HANDLER->Update_Expose($expose);
+		var_dump($expose);
 	//	printf("Total number of exposes: %d\n", count($exposes));
-//		die;
+		die;
+		$itr++;
 	}
 }
 
 
-function _special__pets($data, $regexp)
+function _special__pets($data, $regexp, &$expose)
 {
 	$result = DBHandler::TABLE_EXPOSES_MAYBE;
 	preg_match_all($regexp, $data, $output);
@@ -189,6 +201,39 @@ function _special__pets($data, $regexp)
 	return $result;
 }
 
+function _special__kausion($data, $regexp, &$expose)
+{
+	$result = 0;
+	preg_match_all($regexp, $data, $output);
+	if (isset($output[0][0]))
+	{
+		$output = $output[0][0];
+		$data = explode('</dd>', $output);
+		$data = explode('data-ng-non-bindable>', $data[0]);
+		$result = (int)trim($data[1]);
+	}
+	return $result;
+}
+
+
+function _special__adress($data, $regexp, &$expose)
+{
+	$result = '';
+	preg_match_all($regexp, $data, $output);
+	if (isset($output[0][0]))
+	{
+		$output = $output[0][0];
+
+		$street = explode('(', $output)[0];
+		$street = trim(explode('">', $street)[1]);
+		$city = explode(')', $output)[1];
+		$city = explode('</span>', $city)[1];
+		$city = trim(explode('</div>', $city)[0]);
+	}
+	$expose['city'] = $city;
+	$expose['street'] = $street;
+//	return $result;
+}
 
 function check_for_valid_exposes()
 {

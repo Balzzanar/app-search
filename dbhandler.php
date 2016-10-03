@@ -10,9 +10,10 @@ class DBHandler
 	private $TABLE_EXPOSES = 'create table if not exists exposes 
 						(id varchar(20), name text, price_warm int, price_cold int, last_seen int, 
 						first_seen int, care varchar(1), pets varchar(1),
-						zipcode varchar(10), city varchar(30), dist_work int,
+						zipcode varchar(10), city varchar(50), dist_work int,
 						kausion int, url text, collected varchar(1), rooms int, size int,
-						online varchar(1), next_check int);';
+						online varchar(1), next_check int, floor varchar(50), access varchar(50),
+						street varchar(50));';
 
 	function __construct()
 	{
@@ -119,7 +120,9 @@ class DBHandler
 			'rooms' => 0,
 			'size' => 0,
 			'online' => '',
-			'next_check' => 0
+			'next_check' => 0,
+			'floor' => '',
+			'access' => ''
 		);
 	}
 
