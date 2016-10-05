@@ -58,7 +58,6 @@ class DBHandler
 		$list = array();
 		while ($row = $result->fetchArray()) {
 			$list[] = $this->_clean_expose_result($row);
-
 		}
 		return $list;
 	}
@@ -71,10 +70,23 @@ class DBHandler
 		$result = $stmt->execute();		
 		$list = array();
 		while ($row = $result->fetchArray()) {
-			$list[] = $row;
+            $list[] = $this->_clean_expose_result($row);
 		}
 		return reset($list);
 	}
+
+
+    function Get_Exposes_For_Scorecalc()
+    {
+        $stmt = $this->db->prepare('select * from exposes where online != :online');
+        $stmt->bindValue(':online', DBHandler::TABLE_EXPOSES_TRUE);
+        $result = $stmt->execute();
+        $list = array();
+        while ($row = $result->fetchArray()) {
+            $list[] = $this->_clean_expose_result($row);
+        }
+        return $list;
+    }
 
 
 	function Update_Expose($expose) 

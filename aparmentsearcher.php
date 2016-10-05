@@ -31,6 +31,39 @@ $CONFIG = array(
 					),
 		),
 		'expose_not_found' => 'Immobilie nicht gefunden',
+        'scorematrix' => array(
+                        'pets' => array(
+                            'eq' => array(
+                                'N' => -50,
+                                'Y' => 50
+                            ),
+                            'lt' => array(),
+                            'gt' => array()
+                        ),
+                        'price_cold' => array(
+                            'eq' => array(),
+                            'lt' => array(
+                                1000 => 10,
+                                800 => 15,
+                                700 => 20,
+                                600 => 25
+                            ),
+                            'gt' => array()
+                        ),
+                        'price_warm' => array(
+                            'eq' => array(
+                         //       0 =>
+                            ),
+                            'lt' => array(
+                                300 => 5,
+                                250 => 10,
+                                200 => 15,
+                                150 => 20,
+                                100 => 25
+                            ),
+                            'gt' => array()
+                        )
+        )
 	);
 $DATABASE_HANDLER = new DBHandler();
 
@@ -66,6 +99,10 @@ collected, rooms, size, online) values(:id, :name, :price_warm,
 
 
 $next_search_revisit_time = 0;
+
+calculate_expose_score();
+
+die;
 while(true)
 {
 	/***
@@ -85,7 +122,7 @@ while(true)
 
 	collect_expose_information($DATABASE_HANDLER->Get_Exposes_For_Collection());
 
-	check_for_valid_exposes();
+    calculate_expose_score();
 
 	echo "Sleeping... \n";
 	sleep($CONFIG['sleep_time']);	
@@ -142,6 +179,7 @@ function collect_expose_information($exposes)
 			continue;
 		}
 
+        $expose['online'] = DBHandler::TABLE_EXPOSES_TRUE;
 		printf("(%d/%d), Expose is online, collecting information for expose (%s)\n", $itr, count($exposes)-1, $expose['id']);
 
 		/* Get all integer values */
@@ -198,7 +236,7 @@ function _special__pets($data, $regexp, &$expose)
 			$result = DBHandler::TABLE_EXPOSES_TRUE;	
 		}
 	}
-	return $result;
+	$expose['pets'] = $result;
 }
 
 function _special__kausion($data, $regexp, &$expose)
@@ -212,13 +250,14 @@ function _special__kausion($data, $regexp, &$expose)
 		$data = explode('data-ng-non-bindable>', $data[0]);
 		$result = (int)trim($data[1]);
 	}
-	return $result;
+	$expose['kausion'] = $result;
 }
 
 
 function _special__adress($data, $regexp, &$expose)
 {
-	$result = '';
+	$street = '';
+	$city = ''; 
 	preg_match_all($regexp, $data, $output);
 	if (isset($output[0][0]))
 	{
@@ -232,12 +271,50 @@ function _special__adress($data, $regexp, &$expose)
 	}
 	$expose['city'] = $city;
 	$expose['street'] = $street;
-//	return $result;
 }
 
-function check_for_valid_exposes()
+function calculate_expose_score()
 {
-	# STUB!
+    global $DATABASE_HANDLER;
+    global $CONFIG;
+
+    $exposes = $DATABASE_HANDLER->Get_Exposes_For_Scorecalc();
+    $scorearray = $CONFIG['scorematrix'];
+
+    foreach ($exposes as $expose_key => $expose_value)
+    {
+        $score = 0;
+        foreach ($exposes[$expose_key] as $key => $value)
+        {
+            if (array_key_exists($key, $scorearray))
+            {
+                $score += get_score($value, $scorearray[$key]);
+            }
+        }
+        $exposes[$expose_key]['score'] = $score;
+    }
+    var_dump($exposes);
+}
+
+function get_score($value, $thresholds)
+{
+    $resscore = 0;
+
+    foreach ($thresholds['eq'] as $threshold => $score)
+    {
+        if ($value == $threshold) $resscore += $score;
+    }
+
+    foreach ($thresholds['lt'] as $threshold => $score)
+    {
+        if ($value < $threshold) $resscore += $score;
+    }
+
+    foreach ($thresholds['gt'] as $threshold => $score)
+    {
+        if ($value > $threshold) $resscore += $score;
+    }
+    return $resscore;
 }
 
 
