@@ -9,7 +9,7 @@ class DBHandler
 	private $db;
 	private $TABLE_EXPOSES = 'create table if not exists exposes 
 						(id varchar(20), name text, price_warm int, price_cold int, last_seen int, 
-						first_seen int, care varchar(1), pets varchar(1),
+						first_seen int, score int, pets varchar(1),
 						zipcode varchar(10), city varchar(50), dist_work int,
 						kausion int, url text, collected varchar(1), rooms int, size int,
 						online varchar(1), next_check int, floor varchar(50), access varchar(50),
@@ -121,7 +121,7 @@ class DBHandler
 			'price_cold' => 0,
 			'first_seen' => 0,
 			'last_seen' => 0,
-			'care' => '',
+			'score' => 0,
 			'pets' => '',
 			'zipcode' => '',
 			'city' => '',

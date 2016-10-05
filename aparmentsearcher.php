@@ -1,13 +1,14 @@
 <?php
 
 require('dbhandler.php');
+require('specials.php');
 
 $CONFIG = array(
 		'next_search_revisit_offset' => 3000,
 		'next_expose_recheck_offset' => 10800,
 		'sleep_time' => 30,
 		'sites'	=> array(
-					'https://www.immobilienscout24.de/Suche/S-T/Wohnung-Miete/Fahrzeitsuche/M_fcnchen/-/113055/2029726/-/1276002059/60/2,00-/-/EURO--800,00?enteredFrom=one_step_search'
+					'https://www.immobilienscout24.de/Suche/S-T/P-1/Wohnung-Miete/Fahrzeitsuche/M_fcnchen/-/113055/2029726/-/1276002059/60/2,00-/-/EURO--800,00?enteredFrom=one_step_search'
 					),
 		'sites_expose_url_prefix' => 'https://www.immobilienscout24.de/',
 		'regexp' => array(
@@ -41,7 +42,9 @@ $CONFIG = array(
                             'gt' => array()
                         ),
                         'price_cold' => array(
-                            'eq' => array(),
+                            'eq' => array(
+                                0 => -100
+                            ),
                             'lt' => array(
                                 1000 => 10,
                                 800 => 15,
@@ -52,7 +55,7 @@ $CONFIG = array(
                         ),
                         'price_warm' => array(
                             'eq' => array(
-                         //       0 =>
+                                0 => -100
                             ),
                             'lt' => array(
                                 300 => 5,
@@ -66,6 +69,7 @@ $CONFIG = array(
         )
 	);
 $DATABASE_HANDLER = new DBHandler();
+$ERROR_NO = 0;
 
 //preg_match_all("", $input_lines, $output_array);
 
@@ -100,9 +104,6 @@ collected, rooms, size, online) values(:id, :name, :price_warm,
 
 $next_search_revisit_time = 0;
 
-calculate_expose_score();
-
-die;
 while(true)
 {
 	/***
@@ -134,48 +135,68 @@ function revisit_searches()
 	global $CONFIG;
 	global $DATABASE_HANDLER;
 
-	foreach ($CONFIG['sites'] as $site)
-	{
-		$data = file_get_contents($site);
-		preg_match_all($CONFIG['regexp']['search'], $data, $output);
-		if (!isset($output[1]))
-		{
-			echo "No exposes found!\n";
-			return;
-		}
-		$output = $output[1];
-		$expose_ids = array_unique($output);
-		foreach ($expose_ids as $expose_id)
-		{
-			$expose = $DATABASE_HANDLER->Get_Expose_By_Id($expose_id);
-			if ($expose === false)
-			{
-				$expose = DBHandler::Get_default_expose();
-				$expose['id'] = $expose_id;
-				$expose['first_seen'] = time();
-				$expose['url'] = $CONFIG['sites_expose_url_prefix'] . $expose_id;
-				$DATABASE_HANDLER->Store_Expose($expose);
-			}
-		}
-	}
-}
+    /* Generate all the paging sites. */
+    $sites = array_map(function($site){
+        $res = array();
+        for ($i=1; $i<50; $i++)
+        {
+            $_site = str_replace('P-1', 'P-'.$i, $site);
+            $res[] = $_site;
+        }
+        return $res;
+    }, $CONFIG['sites']);
 
+    $found_ids = array();
+	foreach ($sites as $pages)
+	{
+        foreach ($pages as $page)
+        {
+            printf("Getting ids, for page: %s\n", $page);
+            $expose_ids = get_all_expose_ids_from_page($page);
+            if (count(array_diff($expose_ids, $found_ids)) < 1) break;
+            $found_ids = array_merge($found_ids, $expose_ids);
+        }
+    }
+
+    foreach ($found_ids as $expose_id)
+    {
+        $expose = $DATABASE_HANDLER->Get_Expose_By_Id($expose_id);
+        if ($expose === false)
+        {
+            $expose = DBHandler::Get_default_expose();
+            $expose['id'] = $expose_id;
+            $expose['first_seen'] = time();
+            $expose['url'] = $CONFIG['sites_expose_url_prefix'] . $expose_id;
+            $DATABASE_HANDLER->Store_Expose($expose);
+        }
+    }
+}
 
 function collect_expose_information($exposes)
 {
 	global $CONFIG;
 	global $DATABASE_HANDLER;
+    global $ERROR_NO;
 
 	printf("Infomation collection %d in total\n", count($exposes)-1);
 	$itr = 0;
 	foreach ($exposes as $expose)
 	{
-		$data = file_get_contents($expose['url']);   // https://www.immobilienscout24.de/90485806, den failar, perfect att använda som test.
-		if (strpos($data, $CONFIG['expose_not_found']) != false)
+        set_error_handler(function($errno) {
+            /* In order to catch 404s */
+            global $ERROR_NO;
+            $ERROR_NO = $errno;
+        });
+
+		$data = file_get_contents($expose['url']);
+        restore_error_handler();
+
+		if ($ERROR_NO == 2 || strpos($data, $CONFIG['expose_not_found']) != false)
 		{
 			$expose['online'] = DBHandler::TABLE_EXPOSES_FALSE;
 			$DATABASE_HANDLER->Update_Expose($expose);
 			printf("(%d/%d), Expose (%s) was not online, marked as offline\n", $itr, count($exposes)-1, $expose['id']);
+		    $ERROR_NO = 0;
 			continue;
 		}
 
@@ -206,71 +227,15 @@ function collect_expose_information($exposes)
 		foreach ($CONFIG['regexp']['exposes']['special'] as $data_key => $regexp)
 		{
 			$func = '_special__'.$data_key;
-			//$expose[$data_key] = $func($data, $regexp, &$expose);
 			$func($data, $regexp, $expose);
 		}
 
 
 		$expose['next_check'] = time() + $CONFIG['next_expose_recheck_offset'];
-	//	$DATABASE_HANDLER->Update_Expose($expose);
-		var_dump($expose);
-	//	printf("Total number of exposes: %d\n", count($exposes));
-		die;
-		$itr++;
+		$DATABASE_HANDLER->Update_Expose($expose);
+        $itr++;
+        $ERROR_NO = 0;
 	}
-}
-
-
-function _special__pets($data, $regexp, &$expose)
-{
-	$result = DBHandler::TABLE_EXPOSES_MAYBE;
-	preg_match_all($regexp, $data, $output);
-	if (isset($output[1][0]))
-	{
-		if ($output[1][0] == 'Nein')
-		{
-			$result = DBHandler::TABLE_EXPOSES_FALSE;	
-		}
-		if ($output[1][0] == 'Ja')
-		{
-			$result = DBHandler::TABLE_EXPOSES_TRUE;	
-		}
-	}
-	$expose['pets'] = $result;
-}
-
-function _special__kausion($data, $regexp, &$expose)
-{
-	$result = 0;
-	preg_match_all($regexp, $data, $output);
-	if (isset($output[0][0]))
-	{
-		$output = $output[0][0];
-		$data = explode('</dd>', $output);
-		$data = explode('data-ng-non-bindable>', $data[0]);
-		$result = (int)trim($data[1]);
-	}
-	$expose['kausion'] = $result;
-}
-
-
-function _special__adress($data, $regexp, &$expose)
-{
-	$street = '';
-	$city = ''; 
-	preg_match_all($regexp, $data, $output);
-	if (isset($output[0][0]))
-	{
-		$output = $output[0][0];
-
-		$street = explode('(', $output)[0];
-		$street = trim(explode('">', $street)[1]);
-		$city = explode(')', $output)[1];
-		$city = explode('</span>', $city)[1];
-		$city = trim(explode('</div>', $city)[0]);
-	}
-	$expose['city'] = $city;
-	$expose['street'] = $street;
 }
 
 function calculate_expose_score()
@@ -296,24 +261,46 @@ function calculate_expose_score()
     var_dump($exposes);
 }
 
+function get_all_expose_ids_from_page($page)
+{
+    global $CONFIG;
+
+    $data = file_get_contents($page);
+    preg_match_all($CONFIG['regexp']['search'], $data, $output);
+    if (!isset($output[1]))
+    {
+        printf("No exposes found for page: %s\n", $page);
+        return;
+    }
+    $output = $output[1];
+    $expose_ids = array_unique($output);
+    return $expose_ids;
+}
+
 function get_score($value, $thresholds)
 {
     $resscore = 0;
+    $_score = 0;
 
     foreach ($thresholds['eq'] as $threshold => $score)
     {
-        if ($value == $threshold) $resscore += $score;
+        if ($value == $threshold) $_score = $score;
     }
+    $resscore += $_score;
+    $_score = 0;
 
     foreach ($thresholds['lt'] as $threshold => $score)
     {
-        if ($value < $threshold) $resscore += $score;
+        if ($value < $threshold) $_score = $score;
     }
+    $resscore += $_score;
+    $_score = 0;
 
     foreach ($thresholds['gt'] as $threshold => $score)
     {
-        if ($value > $threshold) $resscore += $score;
+        if ($value > $threshold) $_score = $score;
     }
+    $resscore += $_score;
     return $resscore;
 }
 
