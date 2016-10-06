@@ -2,6 +2,7 @@
 
 require('dbhandler.php');
 require('specials.php');
+require('scorematrix.php');
 
 $CONFIG = array(
 		'next_search_revisit_offset' => 3000,
@@ -32,41 +33,9 @@ $CONFIG = array(
 					),
 		),
 		'expose_not_found' => 'Immobilie nicht gefunden',
-        'scorematrix' => array(
-                        'pets' => array(
-                            'eq' => array(
-                                'N' => -50,
-                                'Y' => 50
-                            ),
-                            'lt' => array(),
-                            'gt' => array()
-                        ),
-                        'price_cold' => array(
-                            'eq' => array(
-                                0 => -100
-                            ),
-                            'lt' => array(
-                                1000 => 10,
-                                800 => 15,
-                                700 => 20,
-                                600 => 25
-                            ),
-                            'gt' => array()
-                        ),
-                        'price_warm' => array(
-                            'eq' => array(
-                                0 => -100
-                            ),
-                            'lt' => array(
-                                300 => 5,
-                                250 => 10,
-                                200 => 15,
-                                150 => 20,
-                                100 => 25
-                            ),
-                            'gt' => array()
-                        )
-        )
+        'scorematrix' => $scorematrix,
+        'mail_score_limit' => 50,
+        'mail_time_offset' => 60*60*24 // Only once per day
 	);
 $DATABASE_HANDLER = new DBHandler();
 $ERROR_NO = 0;
@@ -101,6 +70,8 @@ collected, rooms, size, online) values(:id, :name, :price_warm,
 	);
 	//$DATABASE_HANDLER->Store_Expose($expose);
 
+calculate_expose_score();
+die;
 
 $next_search_revisit_time = 0;
 
@@ -108,9 +79,9 @@ while(true)
 {
 	/***
 		# Check if it's time for revisiting the searches. (Unix time stamp, config how often)
-			- Visit the search, and store all exposes.
+			x Visit the search, and store all exposes.
 		# Get all the exposes that needs to be looked at, (decided by a timing mekanism)
-			- Check all the given urls, update the exposes and store them (one at the time). Set a new next_check value (config value)
+			x Check all the given urls, update the exposes and store them (one at the time). Set a new next_check value (config value)
 		# Check if any exposes are a match with the given preferences (config)
 			- If there are, mail them.
 	*/
@@ -122,14 +93,21 @@ while(true)
 	}
 
 	collect_expose_information($DATABASE_HANDLER->Get_Exposes_For_Collection());
-
     calculate_expose_score();
+    handle_high_score();
 
 	echo "Sleeping... \n";
 	sleep($CONFIG['sleep_time']);	
 }
 
-
+/**
+ * Visists the configured search sites, and collects all exposes that it 
+ * finds. Will move through all the pages on the search result as well.
+ * The resulting exposes will then be stored on the databases, 
+ * if they do not already exist.
+ *
+ * @name revisit_searches
+ */
 function revisit_searches()
 {
 	global $CONFIG;
@@ -172,6 +150,13 @@ function revisit_searches()
     }
 }
 
+/**
+ * Grabs all the exposes that has not been flagged for offline, 
+ * and starts to collect information about them. This is done by visiting
+ * the given url, and parsing the result with the help of helper functions.
+ *
+ * @name collect_expose_information
+ */
 function collect_expose_information($exposes)
 {
 	global $CONFIG;
@@ -238,6 +223,13 @@ function collect_expose_information($exposes)
 	}
 }
 
+/**
+ * Based on all the previously collected information, a score
+ * is calculated and stored on the expose. The score is based on a set of
+ * threshholds, defined in scorematrix.php.
+ *
+ * @name calculate_expose_score
+ */
 function calculate_expose_score()
 {
     global $DATABASE_HANDLER;
@@ -261,6 +253,22 @@ function calculate_expose_score()
     var_dump($exposes);
 }
 
+/**
+ * Uses the score calculated in the previous step to determend 
+ * if there are any exposes that score high, if so. That expose 
+ * is then mailed.
+ *
+ * @name handle_high_score
+ */
+function handle_high_score()
+{
+    global $DATABASE_HANDLER;
+    global $CONFIG;
+
+    $exposes = $DATABASE_HANDLER->Get_Exposes_By_Score($CONFIG['mail_score_limit']);
+
+}
+
 function get_all_expose_ids_from_page($page)
 {
     global $CONFIG;
@@ -276,6 +284,7 @@ function get_all_expose_ids_from_page($page)
     $expose_ids = array_unique($output);
     return $expose_ids;
 }
+
 
 function get_score($value, $thresholds)
 {

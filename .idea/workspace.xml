@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="45fa2774-4f80-4cd2-b4bc-119efd821d1a" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/specials.php" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/list.db" afterPath="$PROJECT_DIR$/list.db" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/aparmentsearcher.php" afterPath="$PROJECT_DIR$/aparmentsearcher.php" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/dbhandler.php" afterPath="$PROJECT_DIR$/dbhandler.php" />
-    </list>
+    <list default="true" id="45fa2774-4f80-4cd2-b4bc-119efd821d1a" name="Default" comment="" />
     <ignored path="app-search.iws" />
     <ignored path=".idea/workspace.xml" />
     <ignored path=".idea/dataSources.local.xml" />
@@ -30,8 +24,8 @@
       <file leaf-file-name="aparmentsearcher.php" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/aparmentsearcher.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="255">
-              <caret line="229" column="0" selection-start-line="229" selection-start-column="0" selection-end-line="229" selection-end-column="0" />
+            <state relative-caret-position="150">
+              <caret line="10" column="71" selection-start-line="10" selection-start-column="71" selection-end-line="10" selection-end-column="71" />
               <folding />
             </state>
           </provider>
@@ -247,12 +241,12 @@
       <workItem from="1475594731828" duration="1870000" />
       <workItem from="1475644566163" duration="1627000" />
       <workItem from="1475664326882" duration="3334000" />
-      <workItem from="1475673752453" duration="4432000" />
+      <workItem from="1475673752453" duration="4529000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="11263000" />
+    <option name="totallyTimeSpent" value="11360000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="41" y="23" width="1399" height="877" extended-state="0" />
@@ -389,8 +383,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/aparmentsearcher.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="255">
-          <caret line="229" column="0" selection-start-line="229" selection-start-column="0" selection-end-line="229" selection-end-column="0" />
+        <state relative-caret-position="150">
+          <caret line="10" column="71" selection-start-line="10" selection-start-column="71" selection-end-line="10" selection-end-column="71" />
           <folding />
         </state>
       </provider>

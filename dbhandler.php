@@ -13,7 +13,7 @@ class DBHandler
 						zipcode varchar(10), city varchar(50), dist_work int,
 						kausion int, url text, collected varchar(1), rooms int, size int,
 						online varchar(1), next_check int, floor varchar(50), access varchar(50),
-						street varchar(50));';
+						street varchar(50), next_mail int);';
 
 	function __construct()
 	{
@@ -89,6 +89,20 @@ class DBHandler
     }
 
 
+    function Get_Exposes_By_Score($score)
+    {
+        $stmt = $this->db->prepare('select * from exposes where score > :score and next_mail < :now');
+        $stmt->bindValue(':score', $score);
+        $stmt->bindValue(':now', time());
+        $result = $stmt->execute();
+        $list = array();
+        while ($row = $result->fetchArray()) {
+            $list[] = $this->_clean_expose_result($row);
+        }
+        return $list;
+    }
+
+
 	function Update_Expose($expose) 
 	{
 		$query = 'update exposes set ';
@@ -134,7 +148,8 @@ class DBHandler
 			'online' => '',
 			'next_check' => 0,
 			'floor' => '',
-			'access' => ''
+			'access' => '',
+			'next_mail' => 0
 		);
 	}
 
