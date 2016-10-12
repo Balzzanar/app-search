@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 
 require('dbhandler.php');
@@ -70,8 +71,8 @@ collected, rooms, size, online) values(:id, :name, :price_warm,
 	);
 	//$DATABASE_HANDLER->Store_Expose($expose);
 
-calculate_expose_score();
-die;
+//calculate_expose_score();
+//die;
 
 $next_search_revisit_time = 0;
 
@@ -249,8 +250,8 @@ function calculate_expose_score()
             }
         }
         $exposes[$expose_key]['score'] = $score;
+		$DATABASE_HANDLER->Update_Expose($expose);
     }
-    var_dump($exposes);
 }
 
 /**

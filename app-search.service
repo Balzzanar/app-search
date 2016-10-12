@@ -1,0 +1,11 @@
+[Unit]
+Description=AppartmentSearcher
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/php /code/app-search/aparmentsearcher.php > /code/app-search/app-search.log 2>&1
+PIDFile=/var/run/app-search/app-search.pid
+
+[Install]
+WantedBy=default.target
