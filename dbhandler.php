@@ -14,10 +14,12 @@ class DBHandler
 						kausion int, url text, collected varchar(1), rooms int, size int,
 						online varchar(1), next_check int, floor varchar(50), access varchar(50),
 						street varchar(50), next_mail int);';
+	private $CONFIG;
 
-	function __construct()
+	function __construct($config)
 	{
-		$this->db = new SQLite3('list.db');
+		$this->CONFIG = $config;
+		$this->db = new SQLite3($this->CONFIG['db_file_path']);
 		$this->db->query($this->TABLE_EXPOSES);
 	}
 

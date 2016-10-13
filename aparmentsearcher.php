@@ -36,9 +36,10 @@ $CONFIG = array(
 		'expose_not_found' => 'Immobilie nicht gefunden',
         'scorematrix' => $scorematrix,
         'mail_score_limit' => 50,
-        'mail_time_offset' => 60*60*24 // Only once per day
+        'mail_time_offset' => 60*60*24, // Only once per day
+		'db_file_path' => '/code/app-search/list.db'
 	);
-$DATABASE_HANDLER = new DBHandler();
+$DATABASE_HANDLER = new DBHandler($CONFIG);
 $ERROR_NO = 0;
 
 //preg_match_all("", $input_lines, $output_array);
@@ -71,8 +72,8 @@ collected, rooms, size, online) values(:id, :name, :price_warm,
 	);
 	//$DATABASE_HANDLER->Store_Expose($expose);
 
-//calculate_expose_score();
-//die;
+#collect_expose_information($DATABASE_HANDLER->Get_Exposes_For_Collection());
+#die;
 
 $next_search_revisit_time = 0;
 
@@ -247,10 +248,11 @@ function calculate_expose_score()
             if (array_key_exists($key, $scorearray))
             {
                 $score += get_score($value, $scorearray[$key]);
+				var_dump($score);
             }
         }
         $exposes[$expose_key]['score'] = $score;
-		$DATABASE_HANDLER->Update_Expose($expose);
+		$DATABASE_HANDLER->Update_Expose($exposes[$expose_key]);
     }
 }
 
