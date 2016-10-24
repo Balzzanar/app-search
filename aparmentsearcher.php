@@ -10,7 +10,7 @@ $CONFIG = array(
 		'next_expose_recheck_offset' => 10800,
 		'sleep_time' => 30,
 		'sites'	=> array(
-					'https://www.immobilienscout24.de/Suche/S-T/P-1/Wohnung-Miete/Fahrzeitsuche/M_fcnchen/-/113055/2029726/-/1276002059/60/2,00-/-/EURO--800,00?enteredFrom=one_step_search'
+					'https://www.immobilienscout24.de/Suche/S-T/P-1/Wohnung-Miete/Bayern/Rosenheim?enteredFrom=one_step_search'
 					),
 		'sites_expose_url_prefix' => 'https://www.immobilienscout24.de/',
 		'regexp' => array(

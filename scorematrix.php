@@ -2,7 +2,7 @@
 $scorematrix = array(
                 'pets' => array(
                     'eq' => array(
-                        'N' => -50,
+                        'N' => -100,
                         'Y' => 50
                     ),
                     'lt' => array(),
@@ -25,13 +25,26 @@ $scorematrix = array(
                         0 => -100
                     ),
                     'lt' => array(
-                        300 => 5,
-                        250 => 10,
-                        200 => 15,
+                        300 => 0,
+                        250 => 5,
+                        200 => 10,
                         150 => 20,
                         100 => 25
                     ),
                     'gt' => array()
+                ),
+                'rooms' => array(
+                    'eq' => array(
+                        '1' => -100,
+                        '2' => 10,
+                        '3' => 15,
+                        '4' => 20,
+                        '5' => 25
+                    ),
+                    'lt' => array(),
+                    'gt' => array()
                 )
 			);
+#$scorematrix = array(
+#			);
 ?>

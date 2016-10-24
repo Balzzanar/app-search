@@ -81,7 +81,7 @@ class DBHandler
     function Get_Exposes_For_Scorecalc()
     {
         $stmt = $this->db->prepare('select * from exposes where online != :online');
-        $stmt->bindValue(':online', DBHandler::TABLE_EXPOSES_TRUE);
+        $stmt->bindValue(':online', DBHandler::TABLE_EXPOSES_FALSE);
         $result = $stmt->execute();
         $list = array();
         while ($row = $result->fetchArray()) {
